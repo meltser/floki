@@ -56,7 +56,7 @@ var tokens = {"f2e2a2c4-93f7-4483-9482-87d159c27862":"", "kuku":""};
 
 server.get('/', function (req, res) {
     if (req.session && isValid(req.session.token)) {
-        res.redirect('/html/login.html', 302)
+        res.redirect('/html/main.html')
         return;
     }
 
