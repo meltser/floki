@@ -76,8 +76,8 @@ server.post('/login/:hash', function (req, res) {
     var ret = isValid(token);
     console.log(token);
     if (ret && req.body.remember) {
-        res.cookie('rememberme', '1', { maxAge: 900000, path: '/', httpOnly: true });
-        res.cookie('token', token, { maxAge: 900000, path: '/', httpOnly: true }); // should be secure too
+        res.cookie('rememberme', '1', { maxAge: 7 * 24 * 60 * 60 * 1000, path: '/', httpOnly: true });
+        res.cookie('token', token, { maxAge: 7 * 24 * 60 * 60 * 1000, path: '/', httpOnly: true }); // should be secure too
     }
     if (ret) {
         req.session.token = token;
