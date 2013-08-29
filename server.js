@@ -74,6 +74,7 @@ function isValid(token) {
 server.post('/login/:hash', function (req, res) {
     var token = req.params.hash;
     var ret = isValid(token);
+    console.log(token);
     if (ret && req.body.remember) {
         res.cookie('rememberme', '1', { maxAge: 900000, path: '/', httpOnly: true });
         res.cookie('token', token, { maxAge: 900000, path: '/', httpOnly: true }); // should be secure too
