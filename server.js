@@ -5,14 +5,6 @@ var connect = require('connect')
     , port = (process.env.PORT || 8081);
 var config = require('./config');
 var Sequelize = require("sequelize");
-/*var pg = require('pg');
-var client = new pg.Client(config.conString);
-client.connect(function (err) {
-    if (err) {
-        return console.error('could not connect to postgres', err);
-    }
-    return console.log("connected to db");
-});*/
 
 global.users = {};
 var sql = new Sequelize(config.conString, {logging: false, dialect: 'postgres', sync: { force: true }});
