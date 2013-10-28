@@ -1,26 +1,67 @@
 //setup Dependencies
 var connect = require('connect')
+    , util = require('util')
     , express = require('express')
     , port = (process.env.PORT || 8081);
+var config = require('./config');
+var Sequelize = require("sequelize");
+/*var pg = require('pg');
+var client = new pg.Client(config.conString);
+client.connect(function (err) {
+    if (err) {
+        return console.error('could not connect to postgres', err);
+    }
+    return console.log("connected to db");
+});*/
+
+global.users = {};
+var sql = new Sequelize(config.conString, {logging: false, dialect: 'postgres', sync: { force: true }});
+global.User = sql.import(__dirname + "/models/User");
+global.Torrent = sql.import(__dirname + "/models/Torrent");
+User.hasMany(Torrent, {as: 'Torrents'});
+Torrent.belongsTo(User, {as: 'User'});
+User.sync();
+Torrent.sync(/*{force: true}*/);
+
+User.findAll().success(function(all) {
+    for (var i = 0; i < all.length; ++i) {
+        var user = all[i];
+        users[user.token] = user;
+    }
+    Object.keys(users).forEach(function(key) {
+        console.log(key);
+    });
+});
 
 function isLoggedIn(req) {
-    return req.session && isValid(req.session.token);
+    if (req.session && isValid(req.session.token)) {
+        return true;
+    }
+    if (isValid(req.body.token)) {
+        req.session.token = req.body.token;
+        return true;
+    }
+    if (isValid(req.cookies.token)) {
+        req.session.token = req.cookies.token;
+        return true;
+    }
+    return false;
 }
 
-var authFilter = function(req, res, next) {
+var authFilter = function (req, res, next) {
     if (/\/css|\/html|\/images|\/js/ig.exec(req.originalUrl) != null) {
     } else if (req.originalUrl.indexOf("login") != -1 || req.originalUrl == "/") {
 //    } else if (req.method != "GET") {
     } else if (!isLoggedIn(req)) {
-        res.redirect('/html/login.html');
-        return;
+        res.statusCode = 500;
+        return res.send('Auth failure');
     }
 
     next();
-}
+};
 
 //Setup Express
-var server = express.createServer();
+global.server = express.createServer();
 server.configure(function () {
     server.set('views', __dirname + '/views');
     server.set('view options', { layout: false });
@@ -34,6 +75,7 @@ server.configure(function () {
 
 //setup the errors
 server.error(function (err, req, res, next) {
+    console.log(err);
     if (err instanceof NotFound) {
         res.render('404.jade', { locals: {
             title: '404 - Not Found', description: '', author: '', analyticssiteid: 'XXXXXXX'
@@ -45,14 +87,6 @@ server.error(function (err, req, res, next) {
     }
 });
 server.listen(port);
-
-var tokens = {"f2e2a2c4-93f7-4483-9482-87d159c27862":"", "kuku":""};
-
-///////////////////////////////////////////
-//              Routes                   //
-///////////////////////////////////////////
-
-/////// ADD ALL YOUR ROUTES HERE  /////////
 
 server.get('/', function (req, res) {
     if (req.session && isValid(req.session.token)) {
@@ -68,7 +102,10 @@ server.get('/', function (req, res) {
 });
 
 function isValid(token) {
-    return Object.prototype.hasOwnProperty.call(tokens, token);
+    if (token == undefined || token == null) {
+        return false;
+    }
+    return Object.prototype.hasOwnProperty.call(users, token);
 }
 
 server.post('/login/:hash', function (req, res) {
@@ -85,22 +122,11 @@ server.post('/login/:hash', function (req, res) {
     res.send(ret);
 });
 
+require("./rest");
 
-//A Route for Creating a 500 Error (Useful to keep around)
-server.get('/500', function (req, res) {
-    throw new Error('This is a 500 Error');
+process.on('uncaughtException', function(err) {
+    // handle the error safely
+    console.log(err);
 });
-
-//The 404 Route (ALWAYS Keep this as the last route)
-server.get('/*', function (req, res) {
-    throw new NotFound;
-});
-
-function NotFound(msg) {
-    this.name = 'NotFound';
-    Error.call(this, msg);
-    Error.captureStackTrace(this, arguments.callee);
-}
-
 
 console.log('Listening on http://0.0.0.0:' + port);
